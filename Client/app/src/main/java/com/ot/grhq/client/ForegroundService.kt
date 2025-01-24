@@ -45,6 +45,7 @@ class ForegroundService : Service() {
                     try {
                         connectToWebSocket()
                     } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
                 updateWebSocketID()

