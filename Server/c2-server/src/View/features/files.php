@@ -103,7 +103,7 @@
 <?php require_once __DIR__ . "/../footer.php"; ?>
 <script defer>
     // Establish WebSocket connection
-    const ws = new WebSocket('ws://localhost:8080');
+    const ws = new WebSocket($_ENV['WS_URL']);
     
      // Listen for the WebSocket connection to open
      ws.addEventListener('open', function (event) {

